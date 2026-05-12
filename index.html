@@ -10,7 +10,7 @@
         #ui { position: absolute; top: 15px; left: 15px; z-index: 10; color: white; background: rgba(0, 0, 0, 0.8); padding: 15px; border-radius: 8px; border: 1px solid #00ffcc; }
         #startButton { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 10; padding: 15px 30px; background-color: #00ffcc; color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
         #startButton:hover { background-color: #00ccaa; }
-        video { display: none; } /* Ховаємо оригінал відео */
+        video { display: none; } 
     </style>
     
     <script type="importmap">
@@ -30,7 +30,7 @@
         <em>Наведіть на маркер та натискайте на кнопки</em>
     </div>
     
-    <video id="portfolioVideo" src="ocean.mp4" loop crossorigin="anonymous" playsinline muted></video>
+    <video id="portfolioVideo" src="https://threejs.org/examples/textures/sintel.mp4" loop crossorigin="anonymous" playsinline muted></video>
     
     <button id="startButton">Увімкнути AR-камеру</button>
     <div id="container"></div>
@@ -39,26 +39,20 @@
         import * as THREE from 'three';
         import { MindARThree } from 'mindar-image-three';
 
-        // --- ФУНКЦІЯ ДЛЯ СТВОРЕННЯ КНОПОК З ТЕКСТОМ ---
+        // Генератор кнопок (щоб не залежати від картинок)
         function createTextButton(text, bgColor) {
             const canvas = document.createElement('canvas');
             canvas.width = 512; canvas.height = 128;
             const ctx = canvas.getContext('2d');
-            
-            // Фон кнопки
             ctx.fillStyle = bgColor;
             ctx.roundRect(0, 0, 512, 128, 40);
             ctx.fill();
-            
-            // Текст кнопки
             ctx.fillStyle = 'white';
             ctx.font = 'bold 50px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(text, 256, 64);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            return new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+            return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true });
         }
 
         const mindarThree = new MindARThree({
@@ -69,25 +63,23 @@
         const {renderer, scene, camera} = mindarThree;
         const anchor = mindarThree.addAnchor(0); 
 
-        // Світло
         scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-        // === 1. 3D АВАТАР (ЗОБРАЖЕННЯ + 3D МУЛЬТИМЕДІА) ===
+        // === 1. АВАТАРКА (Публічна текстура) ===
         const textureLoader = new THREE.TextureLoader();
+        // Використовуємо надійну текстуру з сервера Three.js
         const avatarMaterial = new THREE.MeshBasicMaterial({ 
-            map: textureLoader.load('avatar.jpg') 
+            map: textureLoader.load('https://threejs.org/examples/textures/crate.gif') 
         });
-        // Робимо аватар у вигляді 3D-циліндра
-        const avatarGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32);
-        const avatarMesh = new THREE.Mesh(avatarGeo, avatarMaterial);
-        avatarMesh.rotation.x = Math.PI / 2; // Повертаємо обличчям до камери
+        const avatarMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32), avatarMaterial);
+        avatarMesh.rotation.x = Math.PI / 2;
         avatarMesh.position.set(0, 0.4, 0);
         anchor.group.add(avatarMesh);
 
-        // === 2. ІНТЕРАКТИВНІ КНОПКИ ===
+        // === 2. КНОПКИ ===
         const btnGeo = new THREE.PlaneGeometry(0.8, 0.2);
         
-        const btnInfo = new THREE.Mesh(btnGeo, createTextButton('🔊 ПРОФІЛЬ', '#9c27b0'));
+        const btnInfo = new THREE.Mesh(btnGeo, createTextButton('👨‍💻 ПРОФІЛЬ', '#9c27b0'));
         btnInfo.position.set(0, 0, 0);
         anchor.group.add(btnInfo);
 
@@ -95,47 +87,31 @@
         btnVideo.position.set(0, -0.25, 0);
         anchor.group.add(btnVideo);
 
-        const btnLink = new THREE.Mesh(btnGeo, createTextButton('🔗 GITHUB', '#4caf50'));
+        const btnLink = new THREE.Mesh(btnGeo, createTextButton('🔗 УНІВЕРСИТЕТ', '#4caf50'));
         btnLink.position.set(0, -0.5, 0);
         anchor.group.add(btnLink);
 
-        // === 3. ПРИХОВАНИЙ КОНТЕНТ (З'являється по кліку) ===
-        
-        // Прихований текст профілю
+        // === 3. ПРИХОВАНИЙ КОНТЕНТ ===
         const infoPlane = new THREE.Mesh(
             new THREE.PlaneGeometry(1, 0.6), 
-            createTextButton('Розробник AR \n Python & Three.js', '#333333')
+            createTextButton('Розробник AR \n КДПУ', '#333333')
         );
         infoPlane.position.set(-0.9, 0, 0);
-        infoPlane.visible = false; // ХОВАЄМО ВІДРАЗУ
+        infoPlane.visible = false; 
         anchor.group.add(infoPlane);
 
-        // Приховане відео
         const video = document.getElementById('portfolioVideo');
-        const videoMaterial = new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(video) });
-        const videoPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.5625), videoMaterial);
+        const videoPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.5625), new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(video) }));
         videoPlane.position.set(0.9, 0, 0);
-        videoPlane.visible = false; // ХОВАЄМО ВІДРАЗУ
+        videoPlane.visible = false; 
         anchor.group.add(videoPlane);
 
-        // Аудіо
-        const listener = new THREE.AudioListener();
-        camera.add(listener);
-        const sound = new THREE.PositionalAudio(listener);
-        const audioLoader = new THREE.AudioLoader();
-        audioLoader.load('audio1.mp3', (buffer) => {
-            sound.setBuffer(buffer);
-            sound.setRefDistance(1);
-        });
-        anchor.group.add(sound);
-
-
-        // === 4. ВЗАЄМОДІЯ ТА КЛІКИ (RAYCASTER) ===
+        // === 4. ВЗАЄМОДІЯ ===
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
         window.addEventListener('pointerdown', (event) => {
-            if (!anchor.group.visible) return; // Якщо маркер не знайдено, ігноруємо кліки
+            if (!anchor.group.visible) return; 
 
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -146,55 +122,35 @@
             if (intersects.length > 0) {
                 const object = intersects[0].object;
 
-                // Реакція на кнопку ПРОФІЛЬ
                 if (object === btnInfo) {
-                    infoPlane.visible = !infoPlane.visible; // Перемикаємо видимість
-                    if (infoPlane.visible && !sound.isPlaying) {
-                        sound.play(); // Вмикаємо аудіо
-                    } else if (!infoPlane.visible && sound.isPlaying) {
-                        sound.pause();
-                    }
+                    infoPlane.visible = !infoPlane.visible; 
                 }
-                
-                // Реакція на кнопку ПОРТФОЛІО (Відео)
                 else if (object === btnVideo) {
                     videoPlane.visible = !videoPlane.visible;
-                    if (videoPlane.visible) {
-                        video.play().catch(()=>{});
-                    } else {
-                        video.pause();
-                    }
+                    if (videoPlane.visible) video.play().catch(()=>{});
+                    else video.pause();
                 }
-
-                // Реакція на кнопку GITHUB
                 else if (object === btnLink) {
-                    // Відкриваємо сторінку
-                    window.open('https://github.com/', '_blank');
+                    window.open('https://kdpu.edu.ua/', '_blank');
                 }
             }
         });
 
-
-        // === 5. АНІМАЦІЯ ===
         const clock = new THREE.Clock();
 
         const startButton = document.querySelector("#startButton");
         startButton.addEventListener("click", async () => {
             startButton.style.display = "none";
             
-            // Розблокуємо медіа
-            if (listener.context.state === 'suspended') listener.context.resume();
             try { let p = video.play(); if (p !== undefined) p.then(() => video.pause()).catch(() => {}); } catch(e){}
             
             await mindarThree.start();
             
             renderer.setAnimationLoop(() => {
                 const time = clock.getElapsedTime();
+                avatarMesh.rotation.z -= 0.02; // Аватар крутиться
                 
-                // Анімація: Аватарка повільно обертається
-                avatarMesh.rotation.z -= 0.02;
-                
-                // Анімація: Кнопки злегка пульсують ("дихають")
+                // Кнопки "дихають"
                 const scale = 1 + Math.sin(time * 3) * 0.02;
                 btnInfo.scale.set(scale, scale, scale);
                 btnVideo.scale.set(scale, scale, scale);
